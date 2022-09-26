@@ -1,0 +1,78 @@
+---
+title: "R0_calculation"
+output: html_document
+date: '2022-09-16'
+---
+# age_group_0017
+```{r}
+a <- 1/(14+21)
+a
+phase <- c("phase1", "phase2", "phase3", "phase4")
+gamma <- c(a, a, a, a)
+population <- c(10117000, 10117000, 10117000, 10117000)
+I <- c(13062.24, 40343.73, 104461.4, 103858.7)
+H <- c(1814.016, 43.11205 ,63.72879 ,42.4719)
+lambda <- c(0.000101858, 0.000292954, 0.000885169, 0.000954649)
+age0017_R0 <- data.frame(phase, gamma, population, I, H, lambda)
+age0017_R0
+
+R0 <- (age0017_R0$lambda * 10117000)/((I + H) * age0017_R0$gamma)
+age0017_R0 <- cbind(age0017_R0, R0)
+age0017_R0
+```
+# age_group_1864
+```{r}
+population <- c(36139000, 36139000, 36139000, 36139000)
+I <- c(45776.4, 78261.87 , 89839.23 , 175332.1)
+H <- c(8083.799 , 498.8053 ,151.5519  ,170.4371)
+lambda <- c(0.000102724, 0.000265009, 0.000395561, 0.000720052)
+age1864_R0 <- data.frame(phase, gamma, population, I, H, lambda)
+age1864_R0
+
+R0 <- (age1864_R0$lambda * 36139000)/((I + H) * age1864_R0$gamma)
+age1864_R0 <- cbind(age1864_R0, R0)
+age1864_R0
+```
+# age_group_6584
+```{r}
+population <- c(9316000, 9316000, 9316000, 9316000)
+I <- c(7091.64, 7433.76  , 8115.79  , 29005.18)
+H <- c(7267.247 , 648.1788 ,113.9972 ,353.2418)
+lambda <- c(0.000103593, 0.000239733, 0.000176768, 0.000543105)
+age6584_R0 <- data.frame(phase, gamma, population, I, H, lambda)
+age6584_R0
+
+R0 <- (age6584_R0$lambda  * 9316000)/((I + H)* age6584_R0$gamma)
+age6584_R0 <- cbind(age6584_R0, R0)
+age6584_R0
+
+R0 <- lambda/gamma
+R0
+```
+# age_group_85
+```{r}
+population <- c(1457000, 1457000, 1457000, 1457000)
+I <- c(2279.108 , 1431.141   , 768.3464   , 3952.747 )
+H <- c(1461.182  , 205.5503  ,18.63731  ,178.7242 )
+lambda <- c(0.000103593, 0.000239733, 0.000176768, 0.000543105)
+age85_R0 <- data.frame(phase, gamma, population, I, H, lambda)
+age85_R0
+
+R0 <- (age85_R0$lambda  * 1457000)/((I + H)* age85_R0$gamma)
+age85_R0 <- cbind(age85_R0, R0)
+age85_R0
+
+R0 <- lambda/gamma
+R0
+```
+
+```{r}
+#phase 2 coverage rate
+cr0017 <- 17953.73 / 10117000
+cr1864 <- 19250714 / 36139000
+cr6584 <- 8874400 / 9316000
+cr85 <- 1365328 / 1457000
+coverage_rates <- cbind(cr0017, cr1864, cr6584, cr85)
+coverage_rates
+```
+

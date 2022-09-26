@@ -1,0 +1,1175 @@
+---
+title: 'SIRHVD Model'
+output: html_document
+date: '2022-09-11'
+---
+
+# SIRHVD Model
+
+## preparation
+```{r}
+# LOAD THE PACKAGES:
+library(deSolve)
+library(reshape2)
+library(ggplot2)
+```
+```{r}
+vars <- read.csv("vars_calc.csv")
+x_time <- seq.Date(as.Date("2020-1-30"), as.Date("2022-08-18"),"day")
+```
+
+## age group 00_17
+
+### phase 1
+
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = 10116999, # the start values of phase 2 are from the end of phase 1
+  I = 1,
+  R = 0,
+  H = 0,
+  V = 0,
+  D = 0
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase1" & age_group == "00_17" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase1" & age_group == "00_17" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase1" & age_group == "00_17" & var_name == "mu", select = "mean"))
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 0, to = 312, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+
+    # The differential equations
+    dS <- -lambda * S + sigma * R
+    dI <- lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- 0
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_0017_phase1 <- output
+
+parameters
+output[nrow(output),]
+```
+
+### phase 2
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase2" & age_group == "00_17" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase2" & age_group == "00_17" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase2" & age_group == "00_17" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase2" & age_group == "00_17" & var_name == "p", select = "mean")),
+  q = 0.79
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 313, to = 472, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- mu * H
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_0017_phase2 <- output
+
+output[nrow(output),]
+
+parameters
+```
+
+### phase 3
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase3" & age_group == "00_17" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase3" & age_group == "00_17" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase3" & age_group == "00_17" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase3" & age_group == "00_17" & var_name == "p", select = "mean")),
+  q = 0.67
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 473, to = 666, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_0017_phase3 <- output
+
+output[nrow(output),]
+```
+
+### phase 4
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase4" & age_group == "00_17" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase4" & age_group == "00_17" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase4" & age_group == "00_17" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase4" & age_group == "00_17" & var_name == "p", select = "mean")),
+  q = 0.62
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 667, to = 931, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_0017_phase4 <- output
+
+# PLOTTING THE OUTPUT
+output_0017 <- rbind(
+    output_0017_phase1,
+    output_0017_phase2,
+    output_0017_phase3,
+    output_0017_phase4
+  )
+
+output_0017$time <- x_time
+output_long <- melt(as.data.frame(output_0017), id = "time") # turn output dataset into long format
+
+# at every timestep
+output_long$proportion <- output_long$value / sum(initial_state_values)
+
+
+output[nrow(output),]
+
+# Plot this new column
+ggplot(
+  data = output_long, # specify object containing data to plot
+  aes(x = time, y = proportion, colour = variable, group = variable)
+) + # assign columns to axes and groups
+  geom_vline(aes(xintercept=as.Date('2020-12-07')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-05-16')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-11-26')),linetype=5,col="grey") +
+  geom_line() + # represent data as lines
+  xlab("Time (days)") + # add label for x axis
+  ylab("Proportion of the population") + # add label for y axis
+  labs(colour = "Compartments") # add legend title
+
+```
+
+
+## age group 18-64
+
+### phase 1
+
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = 36138999, # the start values of phase 2 are from the end of phase 1
+  I = 1,
+  R = 0,
+  H = 0,
+  V = 0,
+  D = 0
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase1" & age_group == "18_64" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase1" & age_group == "18_64" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase1" & age_group == "18_64" & var_name == "mu", select = "mean"))
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 0, to = 312, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+
+    # The differential equations
+    dS <- -lambda * S + sigma * R
+    dI <- lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- 0
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_1864_phase1 <- output
+
+parameters
+output[nrow(output),]
+
+
+```
+
+### phase 2
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase2" & age_group == "18_64" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase2" & age_group == "18_64" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase2" & age_group == "18_64" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase2" & age_group == "18_64" & var_name == "p", select = "mean")),
+  q = 0.79
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 313, to = 472, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- mu * H
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_1864_phase2 <- output
+
+output[nrow(output),]
+```
+
+### phase 3
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase3" & age_group == "18_64" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase3" & age_group == "18_64" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase3" & age_group == "18_64" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase3" & age_group == "18_64" & var_name == "p", select = "mean")),
+  q = 0.67
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 473, to = 666, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_1864_phase3 <- output
+
+output[nrow(output),]
+```
+
+### phase 4
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase4" & age_group == "18_64" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase4" & age_group == "18_64" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase4" & age_group == "18_64" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase4" & age_group == "18_64" & var_name == "p", select = "mean")),
+  q = 0.62
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 667, to = 931, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_1864_phase4 <- output
+
+# PLOTTING THE OUTPUT
+output_1864 <- rbind(
+    output_1864_phase1,
+    output_1864_phase2,
+    output_1864_phase3,
+    output_1864_phase4
+  )
+
+output_1864$time <- x_time
+output_long <- melt(as.data.frame(output_1864), id = "time") # turn output dataset into long format
+
+# at every timestep
+output_long$proportion <- output_long$value / sum(initial_state_values)
+
+
+output[nrow(output),]
+
+# Plot this new column
+ggplot(
+  data = output_long, # specify object containing data to plot
+  aes(x = time, y = proportion, colour = variable, group = variable)
+) + # assign columns to axes and groups
+  geom_vline(aes(xintercept=as.Date('2020-12-07')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-05-16')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-11-26')),linetype=5,col="grey") +
+  geom_line() + # represent data as lines
+  xlab("Time (days)") + # add label for x axis
+  ylab("Proportion of the population") + # add label for y axis
+  labs(colour = "Compartments") # add legend title
+
+output[nrow(output),]
+```
+
+## age group 65-84
+
+### phase 1
+
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = 9315999, # the start values of phase 2 are from the end of phase 1
+  I = 1,
+  R = 0,
+  H = 0,
+  V = 0,
+  D = 0
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase1" & age_group == "65_84" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase1" & age_group == "65_84" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase1" & age_group == "65_84" & var_name == "mu", select = "mean"))
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 0, to = 312, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+
+    # The differential equations
+    dS <- -lambda * S + sigma * R
+    dI <- lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- 0
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_6584_phase1 <- output
+
+parameters
+output[nrow(output),]
+```
+
+### phase 2
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase2" & age_group == "65_84" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase2" & age_group == "65_84" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase2" & age_group == "65_84" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase2" & age_group == "65_84" & var_name == "p", select = "mean")),
+  q = 0.79
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 313, to = 472, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- mu * H
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_6584_phase2 <- output
+
+output[nrow(output),]
+```
+
+### phase 3
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase3" & age_group == "65_84" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase3" & age_group == "65_84" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase3" & age_group == "65_84" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase3" & age_group == "65_84" & var_name == "p", select = "mean")),
+  q = 0.67
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 473, to = 666, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_6584_phase3 <- output
+
+output[nrow(output),]
+```
+
+### phase 4
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase4" & age_group == "65_84" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase4" & age_group == "65_84" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase4" & age_group == "65_84" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase4" & age_group == "65_84" & var_name == "p", select = "mean")),
+  q = 0.62
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 667, to = 931, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_6584_phase4 <- output
+
+# PLOTTING THE OUTPUT
+output_6584 <- rbind(
+    output_6584_phase1,
+    output_6584_phase2,
+    output_6584_phase3,
+    output_6584_phase4
+  )
+
+output_6584$time <- x_time
+output_long <- melt(as.data.frame(output_6584), id = "time") # turn output dataset into long format
+
+# at every timestep
+output_long$proportion <- output_long$value / sum(initial_state_values)
+
+
+output[nrow(output),]
+
+# Plot this new column
+ggplot(
+  data = output_long, # specify object containing data to plot
+  aes(x = time, y = proportion, colour = variable, group = variable)
+) + # assign columns to axes and groups
+  geom_vline(aes(xintercept=as.Date('2020-12-07')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-05-16')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-11-26')),linetype=5,col="grey") +
+  geom_line() + # represent data as lines
+  xlab("Time (days)") + # add label for x axis
+  ylab("Proportion of the population") + # add label for y axis
+  labs(colour = "Compartments") # add legend title
+
+output[nrow(output),]
+```
+
+## age group 85+
+
+### phase 1
+
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = 1456999, # the start values of phase 2 are from the end of phase 1
+  I = 1,
+  R = 0,
+  H = 0,
+  V = 0,
+  D = 0
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase1" & age_group == "85_" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase1" & age_group == "85_" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase1" & age_group == "85_" & var_name == "mu", select = "mean"))
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 0, to = 312, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+
+    # The differential equations
+    dS <- -lambda * S + sigma * R
+    dI <- lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- 0
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_85_phase1 <- output
+
+parameters
+output[nrow(output),]
+```
+
+### phase 2
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase2" & age_group == "85_" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase2" & age_group == "85_" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase2" & age_group == "85_" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase2" & age_group == "85_" & var_name == "p", select = "mean")),
+  q = 0.79
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 313, to = 472, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- mu * H
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_85_phase2 <- output
+
+output[nrow(output),]
+```
+
+### phase 3
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase3" & age_group == "85_" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase3" & age_group == "85_" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase3" & age_group == "85_" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase3" & age_group == "85_" & var_name == "p", select = "mean")),
+  q = 0.67
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 473, to = 666, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_85_phase3 <- output
+
+output[nrow(output),]
+```
+
+### phase 4
+```{r}
+# MODEL INPUTS:
+
+# Vector storing the initial number of people in each compartment
+initial_state_values <- c(
+  S = output[nrow(output), 2], # the start values of phase 2 are from the end of phase 1
+  I = output[nrow(output), 3],
+  R = output[nrow(output), 4],
+  H = output[nrow(output), 5],
+  V = output[nrow(output), 6],
+  D = output[nrow(output), 7]
+)
+
+
+
+# Vector storing the parameters describing the transition rates in units of days^-1
+parameters <- c(
+  gamma1 = 1 / 14,
+  gamma2 = 1 / 21,
+  sigma = 1 / 90,
+  lambda = as.numeric(subset(vars, phase == "phase4" & age_group == "85_" & var_name == "lambda", select = "mean")),
+  alpha = as.numeric(subset(vars, phase == "phase4" & age_group == "85_" & var_name == "alpha", select = "mean")),
+  mu = as.numeric(subset(vars, phase == "phase4" & age_group == "85_" & var_name == "mu", select = "mean")),
+  p = as.numeric(subset(vars, phase == "phase4" & age_group == "85_" & var_name == "p", select = "mean")),
+  q = 0.62
+)
+# TIMESTEPS:
+
+# Vector storing the sequence of timesteps to solve the model at
+times <- seq(from = 667, to = 931, by = 1) # from 0 to 160 days in daily intervals
+
+# SIR MODEL FUNCTION:
+
+# The model function takes as input arguments (in the following order): time, state and parameters
+sir_model <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), { # tell R to unpack variable names from the state and parameters inputs
+    N <- S + I + R + H + V
+    # The differential equations
+    dS <- -lambda * S - p * S + sigma * R
+    dI <- (1 - q) * lambda * V + lambda * S - alpha * I - gamma1 * I
+    dR <- gamma1 * I + gamma2 * H - sigma * R
+    dH <- alpha * I - mu * H - gamma2 * H
+    dV <- -(1 - q) * lambda * V + p * S
+    dD <- H * mu
+    # Return the number of people in the S, I and R compartments at each timestep
+    return(list(c(dS, dI, dR, dH, dV, dD)))
+  })
+}
+
+# MODEL OUTPUT (solving the differential equations):
+
+# Solving the differential equations using the ode integration algorithm
+output <- as.data.frame(ode(
+  y = initial_state_values,
+  times = times,
+  func = sir_model,
+  parms = parameters
+))
+
+output_85_phase4 <- output
+
+# PLOTTING THE OUTPUT
+output_85 <- rbind(
+    output_85_phase1,
+    output_85_phase2,
+    output_85_phase3,
+    output_85_phase4
+  )
+
+output_85$time <- x_time
+output_long <- melt(as.data.frame(output_85), id = "time") # turn output dataset into long format
+
+# at every timestep
+output_long$proportion <- output_long$value / sum(initial_state_values)
+
+
+output[nrow(output),]
+
+# Plot this new column
+ggplot(
+  data = output_long, # specify object containing data to plot
+  aes(x = time, y = proportion, colour = variable, group = variable)
+) + # assign columns to axes and groups
+  geom_vline(aes(xintercept=as.Date('2020-12-07')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-05-16')),linetype=5,col="grey") +
+  geom_vline(aes(xintercept=as.Date('2021-11-26')),linetype=5,col="grey") +
+  geom_line() + # represent data as lines
+  xlab("Time (days)") + # add label for x axis
+  ylab("Proportion of the population") + # add label for y axis
+  labs(colour = "Compartments") # add legend title
+
+output[nrow(output),]
+```

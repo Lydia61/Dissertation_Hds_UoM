@@ -1,0 +1,180 @@
+---
+title: "dissertation"
+output:
+  html_document: default
+  pdf_document: default
+date: "2022-09-04"
+---
+```{r}
+library("robust")
+library("qcc")
+```
+
+```{r}
+dat1 <- read.csv("phase_new_poisson_data.csv")
+# dat1
+names(dat1)
+summary(dat1[c(2, 3, 4, 5, 6, 8, 9)])
+```
+
+#Observe the offset properties of y, and possible outlier points.
+```{r}
+# attach(dat1)
+# hist(new_case, breaks=20, xlab="current_case_0017",
+#    main="current_count")
+```
+
+```{r}
+# phase1
+dat1_phase1 <- subset(dat1, phase == "phase4")
+# dat1_phase1
+
+# log(population)
+logpop_phase1 <- log(dat1_phase1[, 7])
+# logpop_phase1
+length(logpop_phase1)
+
+# new_dat1_phase1
+new_dat1_phase1 <- cbind(dat1_phase1, logpop_phase1)
+# new_dat1_phase1
+
+# fit model
+#fit <- glm(new_case ~ offset(logpop_phase1)
+#  + as.factor(age_group)
+#  + current_case_0017
+#  + current_case_1864
+#  + current_case_6584
+ # + current_case_85,
+#dat = new_dat1_phase1,
+#family = poisson()
+#)
+#summary(fit)
+```
+
+#explan model
+```{r}
+# coef(fit) #系数
+# exp(coef(fit))
+```
+```{r}
+#deviance(fit) / df.residual(fit)
+# 远大于1 不可取
+
+# library(qcc)
+# qcc.overdispersion.test(new_dat1_phase1$new_case, type="poisson")
+# p小于0 确实过度离势
+```
+
+```{r}
+# fit.od <- glm(new_case ~ offset(logpop_phase1)
+#           + as.factor(age_group)
+#           + current_case_0017
+#           + current_case_1864
+#          + current_case_6584
+#          + current_case_85,
+#          dat = new_dat1_phase1,
+#          family = quasipoisson())
+# summary(fit.od)
+
+# coef2 <- coef(fit.od) #系数
+# exp(coef(fit.od))
+```
+
+```{r}
+# 检验多重共线性
+# library(car)
+# vif(fit.od)
+# sqrt(vif(fit.od)) > 2
+```
+
+```{r}
+fit.od.multi <- glm(new_case ~ offset(logpop_phase1)
+  + as.factor(age_group)
+  + current_case_0017
+  + current_case_1864
+  + current_case_6584
+  + current_case_85,
+dat = new_dat1_phase1,
+family = quasipoisson()
+)
+summary(fit.od.multi)
+
+coef2 <- coef(fit.od.multi) # coefficient
+exp(coef(fit.od.multi))
+```
+
+```{r}
+# outlierTest(fit.od.multi)#Outlying Points
+
+# Model Fitting Regression Diagnostics
+# plot(predict(fit.od.multi, type="response"),
+#     residuals(fit.od.multi, type="deviance"))
+
+# library(car)
+# influencePlot(fit.od.multi)
+```
+
+```{r}
+age_0017 <- as.integer(new_dat1_phase1["age_group"] == "1")
+age_1864 <- as.integer(new_dat1_phase1["age_group"] == "2")
+age_6584 <- as.integer(new_dat1_phase1["age_group"] == "3")
+age_85 <- as.integer(new_dat1_phase1["age_group"] == "4")
+
+X <- subset(
+  new_dat1_phase1,
+  select = c(
+    "current_case_0017",
+    "current_case_1864",
+    "current_case_6584",
+    "current_case_85"
+  )
+)
+X <- cbind(
+  1,
+  age_1864,
+  age_6584,
+  age_85,
+  X
+)
+colnames(X)[1] <- "Intercept"
+X[1, ]
+```
+
+```{r}
+estimate_lambda <- function(beta, X) {
+  exp(rowSums(t(beta * t(X))))
+}
+
+X_0017_phase1 <- subset(X, age_0017 == 1)
+X_1864_phase1 <- subset(X, age_1864 == 1)
+X_6584_phase1 <- subset(X, age_6584 == 1)
+X_85_phase1 <- subset(X, age_85 == 1)
+
+lambda_0017_phase1 <- estimate_lambda(coef2, X_0017_phase1)
+lambda_1864_phase1 <- estimate_lambda(coef2, X_1864_phase1)
+lambda_6584_phase1 <- estimate_lambda(coef2, X_6584_phase1)
+lambda_85_phase1 <- estimate_lambda(coef2, X_85_phase1)
+# lambda_total <- estimate_lambda(coef2, X)
+
+summary(lambda_0017_phase1)
+summary(lambda_1864_phase1)
+vars <- cbind(lambda_0017_phase1, lambda_1864_phase1, lambda_6584_phase1, lambda_85_phase1)
+# write.csv(vars, file="phase4_lambda_estimation.csv")
+summary(vars)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
